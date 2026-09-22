@@ -1,7 +1,7 @@
 import os
 
 API_KEY = os.environ.get("GEMINI_API_KEY", "")
-MODEL = "gemini-3-flash"
+MODEL = "gemini-3.6-flash"
 
 YOUR_NAME = "master"
 AI_NAME = "Lisa"
