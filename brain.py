@@ -39,16 +39,18 @@ def _try_stream(history):
     return res
 
 def ask_stream(history):
-    """Yields text chunks as they arrive from Gemini. Retries automatically on overload."""
     max_tries = 3
     last_err = None
 
     for attempt in range(max_tries):
         try:
             res = _try_stream(history)
-        except requests.exceptions.RequestException:
+        except requests.exceptions.RequestException as e:
+            print(f"[LISA DEBUG] Connection error: {e}", flush=True)
             yield "There seems to be a connection problem. Please check your internet and try again."
             return
+
+        print(f"[LISA DEBUG] Attempt {attempt+1}: Gemini status = {res.status_code}", flush=True)
 
         if res.status_code == 200:
             got_any = False
@@ -68,10 +70,13 @@ def ask_stream(history):
                 except (KeyError, IndexError, json.JSONDecodeError):
                     continue
             if not got_any:
+                print("[LISA DEBUG] Got 200 but no text in response", flush=True)
                 yield "No response came through. Please try again."
             return
 
         try:
+            body_text = res.text
+            print(f"[LISA DEBUG] Error body: {body_text}", flush=True)
             last_err = res.json()["error"]["message"]
         except Exception:
             last_err = f"Error {res.status_code}"
@@ -80,6 +85,8 @@ def ask_stream(history):
             time.sleep(2 * (attempt + 1))
             continue
         break
+
+    print(f"[LISA DEBUG] Final error: {last_err}", flush=True)
 
     if "API key" in (last_err or ""):
         yield "The API key doesn't look right. Please check config.py."
