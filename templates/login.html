@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Lisa - Login</title>
+<style>
+body{font-family:system-ui,sans-serif;background:#FAF9F5;color:#141413;height:100vh;display:flex;align-items:center;justify-content:center;margin:0}
+.box{background:#fff;padding:30px;border-radius:16px;border:1px solid #e5e3da;width:90%;max-width:340px;text-align:center}
+h1{color:#D97757;margin-bottom:6px}
+p{color:#73726C;font-size:14px;margin-bottom:20px}
+input{width:100%;padding:12px;border-radius:10px;border:1px solid #ccc;font-size:15px;margin-bottom:12px;box-sizing:border-box}
+button{width:100%;padding:12px;border:0;border-radius:10px;background:#D97757;color:#fff;font-size:15px;cursor:pointer}
+.err{color:#B3402A;font-size:13px;margin-bottom:10px}
+</style></head>
+<body>
+<div class="box">
+<h1>Lisa</h1>
+<p>Enter password to continue</p>
+{% if error %}<div class="err">{{ error }}</div>{% endif %}
+<form method="POST">
+<input type="password" name="password" placeholder="Password" autofocus>
+<button type="submit">Enter</button>
+</form>
+</div>
+</body></html>

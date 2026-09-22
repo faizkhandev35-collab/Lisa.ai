@@ -1,0 +1,5 @@
+	API_KEY = "AQ.8RN6Im68_oF9xYt2hHaezcpchJLZixDHHsDXT8r6S_MPG56w"
+	MODEL = "gemini-2.5-flash"
+
+	YOUR_NAME = "" # MASTER
+	AI_NAME = "Lisa"
