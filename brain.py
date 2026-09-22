@@ -39,31 +39,50 @@ def _try_stream(history):
     return res
 
 def ask_stream(history):
-    try:
-        res = _try_stream(history)
-    except requests.exceptions.RequestException as e:
-        yield f"[DEBUG] Connection error: {e}"
-        return
+    max_tries = 3
+    last_err = None
 
-    if res.status_code == 200:
-        got_any = False
-        for line in res.iter_lines(decode_unicode=True):
-            if not line or not line.startswith("data:"):
-                continue
-            raw = line[len("data:"):].strip()
-            if not raw:
-                continue
-            try:
-                obj = json.loads(raw)
-                parts = obj["candidates"][0]["content"]["parts"]
-                for p in parts:
-                    if "text" in p:
-                        got_any = True
-                        yield p["text"]
-            except (KeyError, IndexError, json.JSONDecodeError):
-                continue
-        if not got_any:
-            yield "[DEBUG] Got 200 OK but no text came back."
-        return
+    for attempt in range(max_tries):
+        try:
+            res = _try_stream(history)
+        except requests.exceptions.RequestException:
+            yield "There seems to be a connection problem. Please check your internet and try again."
+            return
 
-    yield f"[DEBUG] Status code: {res.status_code} | Body: {res.text[:500]}"
+        if res.status_code == 200:
+            got_any = False
+            for line in res.iter_lines(decode_unicode=True):
+                if not line or not line.startswith("data:"):
+                    continue
+                raw = line[len("data:"):].strip()
+                if not raw:
+                    continue
+                try:
+                    obj = json.loads(raw)
+                    parts = obj["candidates"][0]["content"]["parts"]
+                    for p in parts:
+                        if "text" in p:
+                            got_any = True
+                            yield p["text"]
+                except (KeyError, IndexError, json.JSONDecodeError):
+                    continue
+            if not got_any:
+                yield "No response came through. Please try again."
+            return
+
+        try:
+            last_err = res.json()["error"]["message"]
+        except Exception:
+            last_err = f"Error {res.status_code}"
+
+        if res.status_code in (429, 503) and attempt < max_tries - 1:
+            time.sleep(2 * (attempt + 1))
+            continue
+        break
+
+    if "API key" in (last_err or ""):
+        yield "The API key doesn't look right. Please check config.py."
+    elif "quota" in (last_err or "").lower():
+        yield "The free usage limit has been reached. Please try again in a while."
+    else:
+        yield "Google's servers are busy right now. I tried a few times automatically — please try again in a moment."
