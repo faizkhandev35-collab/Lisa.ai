@@ -1,63 +1,98 @@
-import sqlite3, time
+import os
+import time
+import sqlite3
 
-DB = "memory.db"
+DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
+USE_PG = bool(DATABASE_URL)
+DB_FILE = "memory.db"
 
-def get_db():
-    conn = sqlite3.connect(DB)
+if USE_PG:
+    import psycopg
+    from psycopg.rows import dict_row
+
+
+def _conn():
+    if USE_PG:
+        return psycopg.connect(DATABASE_URL, row_factory=dict_row, connect_timeout=15)
+    conn = sqlite3.connect(DB_FILE)
     conn.row_factory = sqlite3.Row
     return conn
 
+
+def _sql(s):
+    return s.replace("?", "%s") if USE_PG else s
+
+
+def _exec(sql, params=(), fetch=None):
+    conn = _conn()
+    try:
+        cur = conn.cursor()
+        cur.execute(_sql(sql), params)
+        result = None
+        if fetch == "all":
+            result = [dict(r) for r in cur.fetchall()]
+        elif fetch == "one":
+            r = cur.fetchone()
+            result = dict(r) if r else None
+        conn.commit()
+        return result
+    finally:
+        conn.close()
+
+
 def init_db():
-    db = get_db()
-    db.execute("""CREATE TABLE IF NOT EXISTS chats(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT DEFAULT 'Nayi chat',
-        created REAL)""")
-    db.execute("""CREATE TABLE IF NOT EXISTS messages(
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        chat_id INTEGER,
-        role TEXT,
-        text TEXT,
-        created REAL)""")
-    db.commit()
-    db.close()
+    if USE_PG:
+        _exec("CREATE TABLE IF NOT EXISTS chats("
+              "id BIGSERIAL PRIMARY KEY, "
+              "title TEXT DEFAULT 'New chat', "
+              "created DOUBLE PRECISION)")
+        _exec("CREATE TABLE IF NOT EXISTS messages("
+              "id BIGSERIAL PRIMARY KEY, "
+              "chat_id BIGINT, role TEXT, text TEXT, "
+              "created DOUBLE PRECISION)")
+        _exec("CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id)")
+    else:
+        _exec("CREATE TABLE IF NOT EXISTS chats("
+              "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+              "title TEXT DEFAULT 'New chat', created REAL)")
+        _exec("CREATE TABLE IF NOT EXISTS messages("
+              "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+              "chat_id INTEGER, role TEXT, text TEXT, created REAL)")
+
 
 def create_chat():
-    db = get_db()
-    cur = db.execute("INSERT INTO chats(title, created) VALUES (?, ?)", ("Nayi chat", time.time()))
-    db.commit()
-    cid = cur.lastrowid
-    db.close()
-    return cid
+    if USE_PG:
+        r = _exec("INSERT INTO chats(title, created) VALUES (?, ?) RETURNING id",
+                  ("New chat", time.time()), fetch="one")
+        return r["id"]
+    conn = _conn()
+    try:
+        cur = conn.execute("INSERT INTO chats(title, created) VALUES (?, ?)",
+                           ("New chat", time.time()))
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
 
 def list_chats():
-    db = get_db()
-    rows = db.execute("SELECT * FROM chats ORDER BY id DESC").fetchall()
-    db.close()
-    return [dict(r) for r in rows]
+    return _exec("SELECT * FROM chats ORDER BY id DESC", fetch="all")
+
 
 def get_messages(chat_id):
-    db = get_db()
-    rows = db.execute("SELECT * FROM messages WHERE chat_id=? ORDER BY id ASC", (chat_id,)).fetchall()
-    db.close()
-    return [dict(r) for r in rows]
+    return _exec("SELECT * FROM messages WHERE chat_id=? ORDER BY id ASC",
+                 (chat_id,), fetch="all")
+
 
 def add_message(chat_id, role, text):
-    db = get_db()
-    db.execute("INSERT INTO messages(chat_id, role, text, created) VALUES (?,?,?,?)",
-               (chat_id, role, text, time.time()))
-    db.commit()
-    db.close()
+    _exec("INSERT INTO messages(chat_id, role, text, created) VALUES (?,?,?,?)",
+          (chat_id, role, text, time.time()))
+
 
 def set_title(chat_id, title):
-    db = get_db()
-    db.execute("UPDATE chats SET title=? WHERE id=?", (title[:40], chat_id))
-    db.commit()
-    db.close()
+    _exec("UPDATE chats SET title=? WHERE id=?", (title[:40], chat_id))
+
 
 def delete_chat(chat_id):
-    db = get_db()
-    db.execute("DELETE FROM chats WHERE id=?", (chat_id,))
-    db.execute("DELETE FROM messages WHERE chat_id=?", (chat_id,))
-    db.commit()
-    db.close()
+    _exec("DELETE FROM messages WHERE chat_id=?", (chat_id,))
+    _exec("DELETE FROM chats WHERE id=?", (chat_id,))
