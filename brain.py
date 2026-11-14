@@ -113,10 +113,20 @@ def _openai_compat(base_url, key, model, history):
         raise ProviderError("empty reply")
 
 
+def _openai(h):
+    env = os.environ.get
+    key = env("OPENAI_API_KEY", "") or env("CHATGPT_API_KEY", "")
+    return _openai_compat(
+        "https://api.openai.com/v1", key,
+        env("OPENAI_MODEL", "gpt-4o-mini"), h)
+
+
 def _registry():
     env = os.environ.get
     return {
         "gemini": lambda h: _gemini(h),
+        "openai": _openai,
+        "chatgpt": _openai,
         "groq": lambda h: _openai_compat(
             "https://api.groq.com/openai/v1",
             env("GROQ_API_KEY", ""),
@@ -135,14 +145,15 @@ def _registry():
 def ask_stream(history):
     registry = _registry()
     order = [
-        n.strip()
-        for n in os.environ.get("LLM_ORDER", "gemini,groq,mistral,openrouter").split(",")
+        n.strip().lower()
+        for n in os.environ.get("LLM_ORDER", "gemini,mistral,chatgpt,groq,openrouter").split(",")
         if n.strip()
     ]
     failures = []
     for name in order:
         fn = registry.get(name)
         if not fn:
+            print(f"[LISA] unknown provider in LLM_ORDER: {name}", flush=True)
             continue
         sent = False
         try:
