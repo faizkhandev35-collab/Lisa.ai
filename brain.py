@@ -1,9 +1,17 @@
 import os
 import json
+import time
 import requests
 import config
 
-TIMEOUT = 120
+TIMEOUT = 180
+MAX_MESSAGES = 16
+SKIP_PREFIXES = ("All my brains are busy", "No API keys are set up")
+HINTS = (
+    "explain", "why", "how", "calculate", "compare", "plan", "analy",
+    "solve", "step by step", "strategy", "business", "debug", "code",
+    "prove", "samjha", "kaise", "kyun", "kyu ", "hisab", "margin", "profit",
+)
 
 
 class ProviderError(Exception):
@@ -25,20 +33,49 @@ def system_text():
     return t
 
 
+def clean_history(history):
+    out = []
+    for m in history:
+        text = (m.get("text") or "").strip()
+        if not text:
+            continue
+        if m["role"] != "user" and text.startswith(SKIP_PREFIXES):
+            continue
+        role = "user" if m["role"] == "user" else "ai"
+        if out and out[-1]["role"] == role:
+            out[-1]["text"] += "\n\n" + text
+        else:
+            out.append({"role": role, "text": text})
+    out = out[-MAX_MESSAGES:]
+    while out and out[0]["role"] != "user":
+        out.pop(0)
+    return out
+
+
+def needs_thinking(history):
+    mode = os.environ.get("THINK_MODE", "auto").lower()
+    if mode == "on":
+        return True
+    if mode == "off":
+        return False
+    last = history[-1]["text"] if history else ""
+    low = last.lower()
+    return len(last) > 150 or any(h in low for h in HINTS)
+
+
 def _gemini(history):
     if not config.API_KEY:
         raise ProviderError("no key")
     contents = []
     for m in history:
-        if not m["text"]:
-            continue
         role = "user" if m["role"] == "user" else "model"
         contents.append({"role": role, "parts": [{"text": m["text"]}]})
     body = {
         "systemInstruction": {"parts": [{"text": system_text()}]},
         "contents": contents,
-        "generationConfig": {"thinkingConfig": {"thinkingBudget": 0}},
     }
+    if not needs_thinking(history):
+        body["generationConfig"] = {"thinkingConfig": {"thinkingBudget": 0}}
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"{config.MODEL}:streamGenerateContent?alt=sse&key={config.API_KEY}"
@@ -75,8 +112,6 @@ def _openai_compat(base_url, key, model, history):
         raise ProviderError("no key")
     msgs = [{"role": "system", "content": system_text()}]
     for m in history:
-        if not m["text"]:
-            continue
         role = "user" if m["role"] == "user" else "assistant"
         msgs.append({"role": role, "content": m["text"]})
     headers = {
@@ -143,10 +178,14 @@ def _registry():
 
 
 def ask_stream(history):
+    history = clean_history(history)
+    if not history:
+        yield "Please send a message first."
+        return
     registry = _registry()
     order = [
         n.strip().lower()
-        for n in os.environ.get("LLM_ORDER", "gemini,mistral,chatgpt,groq,openrouter").split(",")
+        for n in os.environ.get("LLM_ORDER", "gemini,mistral").split(",")
         if n.strip()
     ]
     failures = []
@@ -156,14 +195,15 @@ def ask_stream(history):
             print(f"[LISA] unknown provider in LLM_ORDER: {name}", flush=True)
             continue
         sent = False
+        t0 = time.time()
         try:
             for chunk in fn(history):
                 sent = True
                 yield chunk
-            print(f"[LISA] answered by {name}", flush=True)
+            print(f"[LISA] answered by {name} in {time.time() - t0:.1f}s", flush=True)
             return
         except (ProviderError, requests.exceptions.RequestException) as e:
-            print(f"[LISA] {name} failed: {e}", flush=True)
+            print(f"[LISA] {name} failed after {time.time() - t0:.1f}s: {e}", flush=True)
             if sent:
                 yield "\n\n(The connection dropped midway. Please resend if the answer looks cut off.)"
                 return
