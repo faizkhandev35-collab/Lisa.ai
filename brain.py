@@ -177,10 +177,37 @@ def _registry():
     }
 
 
+LABELS = {
+    "gemini": "Gemini", "openai": "ChatGPT", "chatgpt": "ChatGPT",
+    "groq": "Groq", "mistral": "Mistral", "openrouter": "OpenRouter",
+}
+
+
+def _why(e):
+    s = str(e)
+    if "429" in s:
+        return "limit reached"
+    if "connection" in s:
+        return "no connection"
+    if "empty" in s:
+        return "empty reply"
+    return s
+
+
+def _has_key(name):
+    env = os.environ.get
+    if name == "gemini":
+        return bool(config.API_KEY)
+    if name in ("openai", "chatgpt"):
+        return bool(env("OPENAI_API_KEY") or env("CHATGPT_API_KEY"))
+    return bool(env(name.upper() + "_API_KEY"))
+
+
 def ask_stream(history):
+    yield ("status", "Reading our conversation")
     history = clean_history(history)
     if not history:
-        yield "Please send a message first."
+        yield ("text", "Please send a message first.")
         return
     registry = _registry()
     order = [
@@ -194,22 +221,28 @@ def ask_stream(history):
         if not fn:
             print(f"[LISA] unknown provider in LLM_ORDER: {name}", flush=True)
             continue
+        if not _has_key(name):
+            print(f"[LISA] {name} skipped: no key", flush=True)
+            continue
+        label = LABELS.get(name, name)
+        deep = name == "gemini" and needs_thinking(history)
+        yield ("status", f"Thinking deeply with {label}" if deep else f"Asking {label}")
         sent = False
         t0 = time.time()
         try:
             for chunk in fn(history):
                 sent = True
-                yield chunk
+                yield ("text", chunk)
             print(f"[LISA] answered by {name} in {time.time() - t0:.1f}s", flush=True)
             return
         except (ProviderError, requests.exceptions.RequestException) as e:
             print(f"[LISA] {name} failed after {time.time() - t0:.1f}s: {e}", flush=True)
             if sent:
-                yield "\n\n(The connection dropped midway. Please resend if the answer looks cut off.)"
+                yield ("text", "\n\n(The connection dropped midway. Please resend if the answer looks cut off.)")
                 return
-            if str(e) != "no key":
-                failures.append(f"{name}: {e}")
+            failures.append(f"{name}: {e}")
+            yield ("status", f"{label} unavailable ({_why(e)}), switching brain")
     if failures:
-        yield "All my brains are busy or unreachable right now (" + "; ".join(failures) + "). Please try again in a moment."
+        yield ("text", "All my brains are busy or unreachable right now (" + "; ".join(failures) + "). Please try again in a moment.")
     else:
-        yield "No API keys are set up yet. Please add at least one key in the server settings."
+        yield ("text", "No API keys are set up yet. Please add at least one key in the server settings.")

@@ -85,8 +85,33 @@ def get_messages(chat_id):
 
 
 def add_message(chat_id, role, text):
-    _exec("INSERT INTO messages(chat_id, role, text, created) VALUES (?,?,?,?)",
-          (chat_id, role, text, time.time()))
+    if USE_PG:
+        r = _exec("INSERT INTO messages(chat_id, role, text, created) "
+                  "VALUES (?,?,?,?) RETURNING id",
+                  (chat_id, role, text, time.time()), fetch="one")
+        return r["id"]
+    conn = _conn()
+    try:
+        cur = conn.execute("INSERT INTO messages(chat_id, role, text, created) "
+                           "VALUES (?,?,?,?)",
+                           (chat_id, role, text, time.time()))
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def get_message(chat_id, msg_id):
+    return _exec("SELECT * FROM messages WHERE id=? AND chat_id=?",
+                 (msg_id, chat_id), fetch="one")
+
+
+def update_message(msg_id, text):
+    _exec("UPDATE messages SET text=? WHERE id=?", (text, msg_id))
+
+
+def delete_messages_after(chat_id, msg_id):
+    _exec("DELETE FROM messages WHERE chat_id=? AND id>?", (chat_id, msg_id))
 
 
 def set_title(chat_id, title):
