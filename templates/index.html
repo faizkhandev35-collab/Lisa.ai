@@ -27,24 +27,60 @@ header{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-are
 #menuBtn{width:38px;height:38px;border-radius:9px;display:grid;place-items:center}
 header h1{font-size:16px;font-weight:600;color:var(--accent)}
 #msgs{flex:1;overflow-y:auto;padding:18px 16px;display:flex;flex-direction:column;gap:18px;max-width:720px;margin:0 auto;width:100%}
-.urow{align-self:flex-end;max-width:85%;display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+
+.urow{align-self:flex-end;max-width:85%;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
 .u{background:var(--bubble);padding:10px 15px;border-radius:15px;font-size:15.5px;line-height:1.5;white-space:pre-wrap;overflow-wrap:anywhere}
+.atts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:flex-start}
+.att img{max-width:170px;max-height:170px;border-radius:12px;display:block;border:1px solid var(--line)}
+.att.file{background:var(--bubble);border-radius:12px;padding:8px 12px;font-size:13px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .edit-btn{font-size:12px;color:var(--muted);padding:2px 6px}
 body.busy .edit-btn{display:none}
 .edit-ta{width:min(560px,78vw);min-height:64px;border:1px solid var(--accent);border-radius:12px;padding:10px 12px;font:inherit;font-size:15.5px;background:#fff;color:var(--text);resize:none;outline:0}
 .edit-actions{display:flex;gap:8px}
 .btn-cancel{padding:7px 14px;border-radius:9px;border:1px solid var(--line);font-size:14px}
 .btn-save{padding:7px 14px;border-radius:9px;background:var(--accent);color:#fff;font-size:14px}
+
 .a{max-width:85%;line-height:1.65;font-size:15.5px;white-space:pre-wrap;overflow-wrap:anywhere}
 .think{display:inline-flex;align-items:center;gap:10px;color:var(--accent)}
 .wheel{width:30px;height:30px;animation:spin 3s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .think-txt{font-size:13px;color:var(--muted)}
-@media (prefers-reduced-motion:reduce){.wheel{animation-duration:12s}}
+
+/* edge-on wheel: only the rim line and the 8 knobs are visible, riding at the end of the text */
+.ew{display:inline-block;position:relative;width:18px;height:40px;vertical-align:middle;margin:-8px 0 -8px 6px;color:var(--accent)}
+.ew::before{content:"";position:absolute;left:50%;top:3px;bottom:3px;width:2px;margin-left:-1px;border-radius:2px;background:currentColor;opacity:.5}
+.ew i{position:absolute;left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:currentColor;animation:ewspin 3s linear infinite}
+.ew i:nth-child(1){animation-delay:0s}
+.ew i:nth-child(2){animation-delay:-.375s}
+.ew i:nth-child(3){animation-delay:-.75s}
+.ew i:nth-child(4){animation-delay:-1.125s}
+.ew i:nth-child(5){animation-delay:-1.5s}
+.ew i:nth-child(6){animation-delay:-1.875s}
+.ew i:nth-child(7){animation-delay:-2.25s}
+.ew i:nth-child(8){animation-delay:-2.625s}
+@keyframes ewspin{
+  0%{transform:translate(2px,0) scale(1.35);opacity:1;animation-timing-function:cubic-bezier(.39,.575,.565,1)}
+  25%{transform:translate(0,-15px) scale(.95);opacity:.8;animation-timing-function:cubic-bezier(.47,0,.745,.715)}
+  50%{transform:translate(-2px,0) scale(.55);opacity:.25;animation-timing-function:cubic-bezier(.39,.575,.565,1)}
+  75%{transform:translate(0,15px) scale(.95);opacity:.8;animation-timing-function:cubic-bezier(.47,0,.745,.715)}
+  100%{transform:translate(2px,0) scale(1.35);opacity:1}
+}
+@media (prefers-reduced-motion:reduce){.wheel{animation-duration:12s}.ew i{animation-duration:9s}}
+
 #comp{padding:10px 14px calc(14px + env(safe-area-inset-bottom,0px))}
-.box{max-width:720px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,.05);padding:8px 8px 8px 16px;display:flex;align-items:flex-end;gap:8px}
+#chips{max-width:720px;margin:0 auto 8px;display:flex;gap:8px;flex-wrap:wrap}
+#chips:empty{display:none}
+.chip{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:6px 8px;font-size:13px;max-width:210px}
+.chip img{width:36px;height:36px;object-fit:cover;border-radius:8px}
+.chip .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip .x{color:var(--muted);font-size:18px;padding:0 4px}
+#note{max-width:720px;margin:0 auto 6px;font-size:12.5px;color:#B3402A}
+#note:empty{display:none}
+.box{max-width:720px;margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:20px;box-shadow:0 2px 10px rgba(0,0,0,.05);padding:8px 8px 8px 8px;display:flex;align-items:flex-end;gap:6px}
 .box:focus-within{border-color:rgba(217,119,87,.6)}
-#inp{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:15.5px;padding:8px 0;resize:none;max-height:140px}
+#plus{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;color:var(--muted);flex-shrink:0}
+#plus:hover{background:rgba(127,124,110,.16);color:var(--text)}
+#inp{flex:1;border:0;outline:0;background:transparent;font:inherit;font-size:15.5px;padding:8px 4px;resize:none;max-height:140px}
 #send{width:36px;height:36px;border-radius:10px;background:var(--accent);color:#fff;display:grid;place-items:center;flex-shrink:0}
 #send svg{width:18px;height:18px}
 </style>
@@ -65,7 +101,13 @@ body.busy .edit-btn{display:none}
   </header>
   <div id="msgs"></div>
   <div id="comp">
+    <div id="chips"></div>
+    <div id="note"></div>
     <div class="box">
+      <button id="plus" aria-label="Attach files">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <input id="file" type="file" multiple hidden accept="image/*,.pdf,.txt,.md,.csv,.tsv,.json,.py,.js,.ts,.html,.css,.xml,.log,.yml,.yaml,.ini,.sql,.java,.c,.cpp,.h,.sh">
       <textarea id="inp" rows="1" placeholder="Message Lisa..."></textarea>
       <button id="send" aria-label="Send">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
@@ -77,6 +119,7 @@ body.busy .edit-btn{display:none}
 const $ = id => document.getElementById(id);
 let curId = null;
 let busy = false;
+let pending = [];
 
 const WHEEL = '<svg class="wheel" viewBox="0 0 48 48" aria-hidden="true">'
   + '<circle cx="24" cy="24" r="13" fill="none" stroke="currentColor" stroke-width="2.4"/>'
@@ -96,20 +139,46 @@ function setThink(el, text){
   t.textContent = text;
 }
 
-function scrollEnd(){ const b = $('msgs'); b.scrollTop = b.scrollHeight; }
+function scrollEnd(force){
+  const b = $('msgs');
+  if (force || b.scrollHeight - b.scrollTop - b.clientHeight < 160) b.scrollTop = b.scrollHeight;
+}
 function autosize(el, max){ el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, max || 200) + 'px'; }
 
-function fillUserRow(row, text){
+/* ---------- messages ---------- */
+function renderAtts(list){
+  const wrap = document.createElement('div'); wrap.className = 'atts';
+  list.forEach(a => {
+    if (a.kind === 'image'){
+      const link = document.createElement('a'); link.className = 'att'; link.href = a.url; link.target = '_blank';
+      const im = document.createElement('img'); im.src = a.url; im.alt = a.name;
+      link.appendChild(im); wrap.appendChild(link);
+    } else {
+      const d = document.createElement('div'); d.className = 'att file';
+      d.textContent = (a.kind === 'pdf' ? 'PDF: ' : 'File: ') + a.name;
+      wrap.appendChild(d);
+    }
+  });
+  return wrap;
+}
+
+function fillUserRow(row, text, atts){
+  row._text = text || '';
+  row._atts = atts || [];
   row.classList.remove('editing');
   row.innerHTML = '';
-  const b = document.createElement('div'); b.className = 'u'; b.textContent = text;
+  if (row._atts.length) row.appendChild(renderAtts(row._atts));
+  if (row._text){
+    const b = document.createElement('div'); b.className = 'u'; b.textContent = row._text;
+    row.appendChild(b);
+  }
   const e = document.createElement('button'); e.className = 'edit-btn'; e.textContent = 'Edit';
-  row.append(b, e);
+  row.appendChild(e);
 }
-function makeUserRow(text, id){
+function makeUserRow(text, id, atts){
   const row = document.createElement('div'); row.className = 'urow';
   if (id) row.dataset.id = id;
-  fillUserRow(row, text);
+  fillUserRow(row, text, atts);
   return row;
 }
 function makeAI(text, id){
@@ -119,6 +188,7 @@ function makeAI(text, id){
   return a;
 }
 
+/* ---------- chats ---------- */
 async function loadChats(){
   const r = await fetch('/api/chats');
   if (r.redirected){ location.href = '/login'; return; }
@@ -157,18 +227,57 @@ async function openChat(id){
   const r = await fetch('/api/chats/' + id + '/messages');
   const msgs = await r.json();
   const box = $('msgs'); box.innerHTML = '';
-  msgs.forEach(m => box.appendChild(m.role === 'user' ? makeUserRow(m.text, m.id) : makeAI(m.text, m.id)));
-  scrollEnd(); loadChats();
+  msgs.forEach(m => {
+    if (m.role === 'user'){
+      const atts = (m.atts || []).map(a => ({name:a.name, kind:a.kind, url:'/api/attachments/' + a.id}));
+      box.appendChild(makeUserRow(m.text, m.id, atts));
+    } else {
+      box.appendChild(makeAI(m.text, m.id));
+    }
+  });
+  scrollEnd(true); loadChats();
 }
 
-async function streamReply(url, payload, aiEl, userRow){
+/* ---------- reply animation: text grows line by line with the edge-on wheel at its tip ---------- */
+function startReveal(aiEl){
+  const txt = document.createElement('span'); txt.className = 'txt';
+  const ew = document.createElement('span'); ew.className = 'ew';
+  ew.innerHTML = '<i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i>';
+  aiEl.innerHTML = '';
+  aiEl.append(txt, ew);
+  const st = {target:'', shown:0, ended:false};
+  st.promise = new Promise(res => { st.done = res; });
+  st.timer = setInterval(() => {
+    const backlog = st.target.length - st.shown;
+    if (backlog > 0){
+      const step = document.hidden ? backlog : Math.max(2, Math.ceil(backlog / 14));
+      st.shown = Math.min(st.target.length, st.shown + step);
+      txt.textContent = st.target.slice(0, st.shown);
+      scrollEnd();
+    }
+    if (st.ended && st.shown >= st.target.length){
+      clearInterval(st.timer); ew.remove(); st.done();
+    }
+  }, 28);
+  return st;
+}
+
+async function streamReply(url, body, aiEl, userRow){
   busy = true; document.body.classList.add('busy');
   setThink(aiEl, 'Connecting');
-  let full = '', gotText = false;
+  let st = null, errMsg = '';
   try{
-    const res = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+    const opts = {method:'POST'};
+    if (body instanceof FormData){ opts.body = body; }
+    else { opts.headers = {'Content-Type':'application/json'}; opts.body = JSON.stringify(body); }
+    const res = await fetch(url, opts);
     if (res.redirected){ location.href = '/login'; return; }
-    if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
+    if (!res.ok || !res.body){
+      let m = 'Something went wrong (' + res.status + ').';
+      if (res.status === 413) m = 'Those files are too large. Please send smaller ones.';
+      else { try{ const j = await res.json(); if (j.error) m = j.error; }catch(e){} }
+      throw new Error(m);
+    }
     const reader = res.body.getReader();
     const dec = new TextDecoder();
     let buf = '';
@@ -182,46 +291,112 @@ async function streamReply(url, payload, aiEl, userRow){
         if (!p.startsWith('data:')) continue;
         let ev; try{ ev = JSON.parse(p.slice(5).trim()); }catch(e){ continue; }
         if (ev.user_id && userRow) userRow.dataset.id = ev.user_id;
-        if (ev.status && !gotText) setThink(aiEl, ev.status);
-        if (ev.chunk){ gotText = true; full += ev.chunk; aiEl.textContent = full; scrollEnd(); }
+        if (ev.status && !st) setThink(aiEl, ev.status);
+        if (ev.chunk){
+          if (!st) st = startReveal(aiEl);
+          st.target += ev.chunk;
+        }
         if (ev.done && ev.ai_id) aiEl.dataset.id = ev.ai_id;
       }
     }
-    if (!gotText) aiEl.textContent = 'No reply came through. Please try again.';
   }catch(e){
-    if (!gotText) aiEl.textContent = 'Connection error. Please try again.';
+    errMsg = (e instanceof TypeError) ? 'Connection error. Please try again.' : (e.message || 'Something went wrong.');
+  }
+  if (!st){
+    aiEl.textContent = errMsg || 'No reply came through. Please try again.';
+  } else {
+    if (errMsg) st.target += '\n\n(' + errMsg + ')';
+    st.ended = true;
+    await st.promise;
   }
   busy = false; document.body.classList.remove('busy');
   loadChats();
 }
 
+/* ---------- attachments ---------- */
+function flash(msg){
+  const n = $('note'); n.textContent = msg;
+  clearTimeout(flash.t); flash.t = setTimeout(() => { n.textContent = ''; }, 4000);
+}
+function kindOf(f){
+  const t = (f.type || '').toLowerCase();
+  const ext = (f.name.split('.').pop() || '').toLowerCase();
+  if (t.startsWith('image/')) return 'image';
+  if (t === 'application/pdf' || ext === 'pdf') return 'pdf';
+  const textExt = ['txt','md','csv','tsv','json','py','js','ts','html','css','xml','log','yml','yaml','ini','sql','java','c','cpp','h','sh'];
+  if (t.startsWith('text/') || textExt.indexOf(ext) >= 0) return 'text';
+  return null;
+}
+async function compressImage(file){
+  try{
+    const bmp = await createImageBitmap(file);
+    const sc = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
+    const w = Math.max(1, Math.round(bmp.width * sc)), h = Math.max(1, Math.round(bmp.height * sc));
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, w, h); g.drawImage(bmp, 0, 0, w, h);
+    const blob = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.82));
+    if (blob) return new File([blob], (file.name.replace(/\.[^.]+$/, '') || 'image') + '.jpg', {type:'image/jpeg'});
+  }catch(e){}
+  return file;
+}
+function renderChips(){
+  const box = $('chips'); box.innerHTML = '';
+  pending.forEach((p, i) => {
+    const c = document.createElement('div'); c.className = 'chip';
+    if (p.kind === 'image'){ const im = document.createElement('img'); im.src = p.url; c.appendChild(im); }
+    const nm = document.createElement('span'); nm.className = 'nm'; nm.textContent = p.name; c.appendChild(nm);
+    const x = document.createElement('button'); x.className = 'x'; x.textContent = '\u00d7'; x.setAttribute('aria-label', 'Remove');
+    x.onclick = () => { pending.splice(i, 1); renderChips(); };
+    c.appendChild(x); box.appendChild(c);
+  });
+}
+$('plus').onclick = () => $('file').click();
+$('file').addEventListener('change', async e => {
+  const files = Array.from(e.target.files); e.target.value = '';
+  for (const f of files){
+    if (pending.length >= 4){ flash('You can attach up to 4 files at a time.'); break; }
+    const kind = kindOf(f);
+    if (!kind){ flash("I can't read " + f.name + ' yet. I can read photos, PDFs and text files.'); continue; }
+    const file = kind === 'image' ? await compressImage(f) : f;
+    if (file.size > 9 * 1024 * 1024){ flash(f.name + ' is too large (about 9 MB max).'); continue; }
+    pending.push({file, name:file.name, kind, url:URL.createObjectURL(file)});
+    renderChips();
+  }
+});
+
+/* ---------- send / edit ---------- */
 async function send(){
   if (busy) return;
   const inp = $('inp'); const text = inp.value.trim();
-  if (!text) return;
+  if (!text && !pending.length) return;
   if (!curId){
     const r = await fetch('/api/chats', {method:'POST'});
     curId = (await r.json()).id;
   }
+  const atts = pending.map(p => ({name:p.name, kind:p.kind, url:p.url}));
+  const fd = new FormData(); fd.append('text', text);
+  pending.forEach(p => fd.append('files', p.file, p.file.name));
+  pending = []; renderChips();
   const box = $('msgs');
-  const row = makeUserRow(text, null);
+  const row = makeUserRow(text, null, atts);
   box.appendChild(row);
   inp.value = ''; inp.style.height = 'auto';
-  const ai = makeAI(''); box.appendChild(ai); scrollEnd();
-  await streamReply('/api/chats/' + curId + '/messages/stream', {text}, ai, row);
+  const ai = makeAI(''); box.appendChild(ai); scrollEnd(true);
+  await streamReply('/api/chats/' + curId + '/messages/stream', fd, ai, row);
 }
 
 function startEdit(row){
   if (busy) return;
   if (!row.dataset.id){ openChat(curId); return; }
-  const old = row.querySelector('.u').textContent;
+  const old = row._text || '';
+  const atts = row._atts || [];
   row.classList.add('editing');
   row.innerHTML = '';
+  if (atts.length) row.appendChild(renderAtts(atts));
   const ta = document.createElement('textarea'); ta.className = 'edit-ta'; ta.value = old;
   const acts = document.createElement('div'); acts.className = 'edit-actions';
   acts.innerHTML = '<button class="btn-cancel">Cancel</button><button class="btn-save">Save &amp; send</button>';
   row.append(ta, acts);
-  row.dataset.old = old;
   ta.addEventListener('input', () => autosize(ta));
   autosize(ta); ta.focus();
 }
@@ -229,11 +404,12 @@ function startEdit(row){
 async function saveEdit(row){
   const ta = row.querySelector('.edit-ta');
   const text = ta.value.trim();
-  if (!text) return;
+  const atts = row._atts || [];
+  if (!text && !atts.length) return;
   const id = row.dataset.id;
   while (row.nextSibling) row.nextSibling.remove();
-  fillUserRow(row, text);
-  const ai = makeAI(''); $('msgs').appendChild(ai); scrollEnd();
+  fillUserRow(row, text, atts);
+  const ai = makeAI(''); $('msgs').appendChild(ai); scrollEnd(true);
   await streamReply('/api/chats/' + curId + '/messages/' + id + '/edit', {text}, ai, row);
 }
 
@@ -241,7 +417,7 @@ $('msgs').addEventListener('click', e => {
   const row = e.target.closest('.urow');
   if (!row) return;
   if (e.target.closest('.edit-btn')) startEdit(row);
-  else if (e.target.closest('.btn-cancel')) fillUserRow(row, row.dataset.old || '');
+  else if (e.target.closest('.btn-cancel')) fillUserRow(row, row._text, row._atts);
   else if (e.target.closest('.btn-save')) saveEdit(row);
 });
 

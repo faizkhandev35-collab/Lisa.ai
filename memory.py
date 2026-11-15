@@ -4,7 +4,7 @@ import sqlite3
 
 DATABASE_URL = os.environ.get("DATABASE_URL", "").strip()
 USE_PG = bool(DATABASE_URL)
-DB_FILE = "memory.db"
+DB_FILE = os.environ.get("SQLITE_FILE", "memory.db")
 
 if USE_PG:
     import psycopg
@@ -51,6 +51,12 @@ def init_db():
               "chat_id BIGINT, role TEXT, text TEXT, "
               "created DOUBLE PRECISION)")
         _exec("CREATE INDEX IF NOT EXISTS idx_messages_chat ON messages(chat_id)")
+        _exec("CREATE TABLE IF NOT EXISTS attachments("
+              "id BIGSERIAL PRIMARY KEY, "
+              "message_id BIGINT, chat_id BIGINT, "
+              "name TEXT, mime TEXT, kind TEXT, size BIGINT, "
+              "data BYTEA, created DOUBLE PRECISION)")
+        _exec("CREATE INDEX IF NOT EXISTS idx_att_chat ON attachments(chat_id)")
     else:
         _exec("CREATE TABLE IF NOT EXISTS chats("
               "id INTEGER PRIMARY KEY AUTOINCREMENT, "
@@ -58,6 +64,11 @@ def init_db():
         _exec("CREATE TABLE IF NOT EXISTS messages("
               "id INTEGER PRIMARY KEY AUTOINCREMENT, "
               "chat_id INTEGER, role TEXT, text TEXT, created REAL)")
+        _exec("CREATE TABLE IF NOT EXISTS attachments("
+              "id INTEGER PRIMARY KEY AUTOINCREMENT, "
+              "message_id INTEGER, chat_id INTEGER, "
+              "name TEXT, mime TEXT, kind TEXT, size INTEGER, "
+              "data BLOB, created REAL)")
 
 
 def create_chat():
@@ -111,6 +122,7 @@ def update_message(msg_id, text):
 
 
 def delete_messages_after(chat_id, msg_id):
+    _exec("DELETE FROM attachments WHERE chat_id=? AND message_id>?", (chat_id, msg_id))
     _exec("DELETE FROM messages WHERE chat_id=? AND id>?", (chat_id, msg_id))
 
 
@@ -119,5 +131,24 @@ def set_title(chat_id, title):
 
 
 def delete_chat(chat_id):
+    _exec("DELETE FROM attachments WHERE chat_id=?", (chat_id,))
     _exec("DELETE FROM messages WHERE chat_id=?", (chat_id,))
     _exec("DELETE FROM chats WHERE id=?", (chat_id,))
+
+
+def add_attachment(message_id, chat_id, name, mime, kind, data):
+    _exec("INSERT INTO attachments(message_id, chat_id, name, mime, kind, size, data, created) "
+          "VALUES (?,?,?,?,?,?,?,?)",
+          (message_id, chat_id, name, mime, kind, len(data), data, time.time()))
+
+
+def list_attachments(chat_id):
+    return _exec("SELECT id, message_id, name, mime, kind, size FROM attachments "
+                 "WHERE chat_id=? ORDER BY id ASC", (chat_id,), fetch="all")
+
+
+def get_attachment(att_id):
+    row = _exec("SELECT * FROM attachments WHERE id=?", (att_id,), fetch="one")
+    if row and row.get("data") is not None:
+        row["data"] = bytes(row["data"])
+    return row

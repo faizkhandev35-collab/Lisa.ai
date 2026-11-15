@@ -1,6 +1,7 @@
 import os
 import json
 import time
+import base64
 import requests
 import config
 
@@ -12,6 +13,7 @@ HINTS = (
     "solve", "step by step", "strategy", "business", "debug", "code",
     "prove", "samjha", "kaise", "kyun", "kyu ", "hisab", "margin", "profit",
 )
+VISION = {"gemini"}
 
 
 class ProviderError(Exception):
@@ -37,19 +39,30 @@ def clean_history(history):
     out = []
     for m in history:
         text = (m.get("text") or "").strip()
-        if not text:
+        atts = m.get("atts") or []
+        if not text and not atts:
             continue
         if m["role"] != "user" and text.startswith(SKIP_PREFIXES):
             continue
         role = "user" if m["role"] == "user" else "ai"
         if out and out[-1]["role"] == role:
-            out[-1]["text"] += "\n\n" + text
+            if text:
+                out[-1]["text"] = (out[-1]["text"] + "\n\n" + text).strip()
+            out[-1]["atts"] = out[-1]["atts"] + list(atts)
         else:
-            out.append({"role": role, "text": text})
+            out.append({"role": role, "text": text, "atts": list(atts)})
     out = out[-MAX_MESSAGES:]
     while out and out[0]["role"] != "user":
         out.pop(0)
     return out
+
+
+def needs_vision(history):
+    for m in history:
+        for a in m.get("atts") or []:
+            if a.get("kind") in ("image", "pdf"):
+                return True
+    return False
 
 
 def needs_thinking(history):
@@ -69,7 +82,19 @@ def _gemini(history):
     contents = []
     for m in history:
         role = "user" if m["role"] == "user" else "model"
-        contents.append({"role": role, "parts": [{"text": m["text"]}]})
+        parts = []
+        for a in m.get("atts") or []:
+            parts.append({"inline_data": {
+                "mime_type": a["mime"],
+                "data": base64.b64encode(a["data"]).decode("ascii"),
+            }})
+        if m["text"]:
+            parts.append({"text": m["text"]})
+        elif parts:
+            parts.append({"text": "Please look at the attachment and tell me what it contains, or help me with it."})
+        if not parts:
+            continue
+        contents.append({"role": role, "parts": parts})
     body = {
         "systemInstruction": {"parts": [{"text": system_text()}]},
         "contents": contents,
@@ -112,6 +137,8 @@ def _openai_compat(base_url, key, model, history):
         raise ProviderError("no key")
     msgs = [{"role": "system", "content": system_text()}]
     for m in history:
+        if not m["text"]:
+            continue
         role = "user" if m["role"] == "user" else "assistant"
         msgs.append({"role": role, "content": m["text"]})
     headers = {
@@ -209,6 +236,9 @@ def ask_stream(history):
     if not history:
         yield ("text", "Please send a message first.")
         return
+    vision = needs_vision(history)
+    if vision:
+        yield ("status", "Reading your attachment")
     registry = _registry()
     order = [
         n.strip().lower()
@@ -220,6 +250,9 @@ def ask_stream(history):
         fn = registry.get(name)
         if not fn:
             print(f"[LISA] unknown provider in LLM_ORDER: {name}", flush=True)
+            continue
+        if vision and name not in VISION:
+            print(f"[LISA] {name} skipped: cannot read images or PDFs", flush=True)
             continue
         if not _has_key(name):
             print(f"[LISA] {name} skipped: no key", flush=True)
@@ -242,7 +275,11 @@ def ask_stream(history):
                 return
             failures.append(f"{name}: {e}")
             yield ("status", f"{label} unavailable ({_why(e)}), switching brain")
-    if failures:
+    if vision and failures:
+        yield ("text", "Reading images and PDFs needs Gemini, and it is unavailable right now (" + "; ".join(failures) + "). Please try again in a moment.")
+    elif vision:
+        yield ("text", "Reading images and PDFs needs Gemini, which is not active. Please check LLM_ORDER and the Gemini key.")
+    elif failures:
         yield ("text", "All my brains are busy or unreachable right now (" + "; ".join(failures) + "). Please try again in a moment.")
     else:
         yield ("text", "No API keys are set up yet. Please add at least one key in the server settings.")
