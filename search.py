@@ -20,6 +20,22 @@ TRIGGERS = (
     "kitne ka", "kitne mein", "kitne ki", "aaj ka rate", "aaj ka price",
     "aaj ki news",
 )
+# things whose value changes every day (money, metals, fuel, crypto, markets)
+TOPICS = (
+    "dollar", "usd", "euro", "eur ", "pound", "gbp", "yen", "dirham", "inr",
+    "gold", "silver", "sona ", "sone ", "chandi", "petrol", "diesel", "lpg",
+    "bitcoin", "btc", "ethereum", "crypto", "sensex", "nifty", "share price", "stock price",
+)
+TOPIC_CUES = (
+    "rate", "price", "kimat", "bhav", "cost", "value", "kitne", "kitna", "how much",
+    " to inr", " in inr", " to rupee", " in rupee", "rupees", "convert", "today", "aaj",
+    "abhi", "current", "live", "now", "kya hai", "kaisa", "chal raha", "=",
+)
+# "right now" words only count together with a fact word (so "aaj ka study plan" does not search)
+FRESH = ("aaj", "abhi", "today", "current", "currently", "right now", "live", "this week",
+         "this month", "tonight")
+FACT = ("rate", "price", "kimat", "bhav", "cost", "score", "result", "news", "weather",
+        "mausam", "value of", "kya chal", "who is", "kaun hai")
 NEWS_WORDS = ("news", "headlines", "khabar", "samachar", "just launched")
 
 _usage = {"day": "", "n": 0}
@@ -40,17 +56,34 @@ def _cap():
         return 25
 
 
-def should_search(history):
+def _reason(history):
+    """Returns (should_search, reason)."""
     mode = _mode()
-    if mode == "off" or not _key() or not history:
-        return False
+    if mode == "off":
+        return False, "SEARCH_MODE is off"
+    if not _key():
+        return False, "TAVILY_API_KEY is not set on the server"
+    if not history or history[-1].get("role") != "user":
+        return False, "no user message"
     last = (history[-1].get("text") or "")[:500].strip()
-    if history[-1].get("role") != "user" or not last:
-        return False
+    if not last:
+        return False, "empty message"
     if mode == "on":
-        return True
+        return True, "SEARCH_MODE is on"
     low = last.lower()
-    return any(t in low for t in TRIGGERS)
+    if any(t in low for t in TRIGGERS):
+        return True, "trigger word"
+    if any(t in low for t in TOPICS) and any(c in low for c in TOPIC_CUES):
+        return True, "changing-value topic"
+    if any(f in low for f in FRESH) and any(f in low for f in FACT):
+        return True, "fresh + fact words"
+    return False, "no search needed"
+
+
+def should_search(history):
+    ok, why = _reason(history)
+    print(f"[LISA] search {'on' if ok else 'skipped'}: {why}", flush=True)
+    return ok
 
 
 def build_query(history):
