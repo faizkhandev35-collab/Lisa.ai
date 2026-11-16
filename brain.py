@@ -4,6 +4,7 @@ import time
 import base64
 import requests
 import config
+import search
 
 TIMEOUT = 180
 MAX_MESSAGES = 16
@@ -71,7 +72,7 @@ def needs_thinking(history):
         return True
     if mode == "off":
         return False
-    last = history[-1]["text"] if history else ""
+    last = (history[-1].get("q") or history[-1]["text"]) if history else ""
     low = last.lower()
     return len(last) > 150 or any(h in low for h in HINTS)
 
@@ -239,6 +240,14 @@ def ask_stream(history):
     vision = needs_vision(history)
     if vision:
         yield ("status", "Reading your attachment")
+    if search.should_search(history):
+        yield ("status", "Searching the web")
+        result = search.run(history)
+        history = search.attach(history, result)
+        if result["ok"]:
+            yield ("status", f"Read {result['count']} web sources")
+        else:
+            yield ("status", "Web search unavailable, using what I know")
     registry = _registry()
     order = [
         n.strip().lower()
