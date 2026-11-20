@@ -5,6 +5,7 @@ import base64
 import requests
 import config
 import search
+import phone
 
 TIMEOUT = 180
 MAX_MESSAGES = 16
@@ -33,6 +34,7 @@ def system_text():
     t = load_personality()
     if config.YOUR_NAME:
         t += f"\n\nThe user's name is {config.YOUR_NAME}."
+    t += phone.instructions()
     return t
 
 
@@ -237,6 +239,10 @@ def ask_stream(history):
     if not history:
         yield ("text", "Please send a message first.")
         return
+    user_msg = history[-1]["text"]
+    for marker in ("\n\n[Attached file:", "\n\n[Earlier attachment"):
+        user_msg = user_msg.split(marker)[0]
+    user_msg = user_msg[:300]
     vision = needs_vision(history)
     if vision:
         yield ("status", "Reading your attachment")
@@ -271,11 +277,19 @@ def ask_stream(history):
         yield ("status", f"Thinking deeply with {label}" if deep else f"Asking {label}")
         sent = False
         t0 = time.time()
+        flt = phone.ActionFilter()
         try:
             for chunk in fn(history):
                 sent = True
-                yield ("text", chunk)
+                clean = flt.feed(chunk)
+                if clean:
+                    yield ("text", clean)
+            rest = flt.flush()
+            if rest:
+                yield ("text", rest)
             print(f"[LISA] answered by {name} in {time.time() - t0:.1f}s", flush=True)
+            for line in phone.run_actions(flt.actions, user_msg):
+                yield ("text", line)
             return
         except (ProviderError, requests.exceptions.RequestException) as e:
             print(f"[LISA] {name} failed after {time.time() - t0:.1f}s: {e}", flush=True)
